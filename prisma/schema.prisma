@@ -60,6 +60,7 @@ model Product {
   name           String
   slug           String   @unique
   description    String?
+  category       String?
   price          Decimal  @db.Decimal(10, 2)
   compareAtPrice Decimal? @db.Decimal(10, 2)
   stock          Int      @default(0)
@@ -75,14 +76,12 @@ model Product {
   @@map("product")
 }
 
-// ── Cart: sessionId for guests, userId once logged in ─────────
-// exactly one of sessionId / userId should be set — enforced in the Action layer
+// ── Cart: one cart per account — no guest cart, account required ─
 
 model Cart {
-  id        String  @id @default(uuid())
-  sessionId String? @unique
-  userId    String? @unique
-  user      User?   @relation(fields: [userId], references: [id])
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
   items CartItem[]
 
@@ -107,8 +106,7 @@ model CartItem {
   @@map("cart_item")
 }
 
-// ── Orders: guestEmail for guest checkout, userId for account ─
-// exactly one of userId / guestEmail should be set — enforced in the Action layer
+// ── Orders: account required — no guest checkout ──────────────
 
 enum OrderStatus {
   PENDING
@@ -125,12 +123,9 @@ enum PaymentMethod {
 }
 
 model Order {
-  id           String  @id @default(uuid())
-  userId       String?
-  user         User?   @relation(fields: [userId], references: [id])
-  guestEmail   String?
-  guestName    String?
-  guestContact String?
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   shippingAddress String
   status          OrderStatus   @default(PENDING)
