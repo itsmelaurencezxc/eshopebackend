@@ -1,4 +1,14 @@
 import prisma from "../../utils/client";
+import { OrderStatus } from "@prisma/client";
+import { z } from "zod";
+
+// Seller can only push the order one step forward at a time.
+// CANCELLED is a buyer-only action (see OrderAction.cancel), not reachable here.
+const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  PENDING: "PAID",
+  PAID: "SHIPPED",
+  SHIPPED: "DELIVERED",
+};
 
 // One buyer Order can contain products from more than one shop, so a
 // seller should only ever see the items that belong to their own shop —
@@ -47,6 +57,48 @@ class ShopOrderAction {
       return Array.from(grouped.values());
     } catch (error) {
       console.error("Error listing shop orders:", error);
+      throw error;
+    }
+  }
+
+  static validateStatusUpdate(data: unknown) {
+    const schema = z.object({
+      status: z.enum(["PAID", "SHIPPED", "DELIVERED"]),
+    });
+
+    return schema.safeParse(data);
+  }
+
+  static async updateStatus(
+    orderId: string,
+    shopId: string,
+    status: OrderStatus
+  ) {
+    try {
+      const belongsToShop = await prisma.orderItem.findFirst({
+        where: { orderId, product: { shopId } },
+      });
+      if (!belongsToShop) {
+        throw new Error("NOT_YOUR_ORDER");
+      }
+
+      const order = await prisma.order.findUnique({ where: { id: orderId } });
+      if (!order) {
+        throw new Error("NOT_YOUR_ORDER");
+      }
+
+      if (NEXT_STATUS[order.status] !== status) {
+        throw new Error(
+          `INVALID_TRANSITION:${order.status} -> ${status} is not allowed`
+        );
+      }
+
+      return await prisma.order.update({
+        where: { id: orderId },
+        data: { status },
+      });
+    } catch (error) {
+      console.error("Error updating order status:", error);
       throw error;
     }
   }

@@ -106,6 +106,41 @@ class OrderController {
       });
     }
   }
+
+  async cancel(req: Request, res: Response) {
+    try {
+      const order = await OrderAction.cancel(req.params.id, req.user!.id);
+      return AppResponse.sendSuccess({
+        res,
+        data: order,
+        message: "Order cancelled",
+        code: 200,
+      });
+    } catch (error: any) {
+      if (error.message === "ORDER_NOT_FOUND") {
+        return AppResponse.sendErrors({
+          res,
+          message: "Order not found",
+          data: null,
+          code: 404,
+        });
+      }
+      if (error.message === "CANNOT_CANCEL") {
+        return AppResponse.sendErrors({
+          res,
+          message: "Only pending orders can be cancelled",
+          data: null,
+          code: 409,
+        });
+      }
+      return AppResponse.sendErrors({
+        res,
+        message: "Internal server error",
+        data: null,
+        code: 500,
+      });
+    }
+  }
 }
 
 export default OrderController;

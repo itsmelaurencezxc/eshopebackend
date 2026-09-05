@@ -34,4 +34,50 @@ const shopOrderController = new ShopOrderController();
  */
 shopOrderRoutes.get("/", authenticate, shopOrderController.list);
 
+/**
+ * @swagger
+ * /shop/orders/{orderId}/status:
+ *   patch:
+ *     summary: Move an order forward one step (PENDING -> PAID -> SHIPPED -> DELIVERED)
+ *     description: >
+ *       Only one step at a time — e.g. you can't jump straight from PENDING
+ *       to DELIVERED. Cancelling is a buyer-only action.
+ *     tags: [Seller Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [PAID, SHIPPED, DELIVERED]
+ *     responses:
+ *       200:
+ *         description: Status updated
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Missing or invalid token
+ *       404:
+ *         description: Order not found in your shop
+ *       409:
+ *         description: That status transition isn't allowed from the order's current status
+ */
+shopOrderRoutes.patch(
+  "/:orderId/status",
+  authenticate,
+  shopOrderController.updateStatus
+);
+
 export default shopOrderRoutes;

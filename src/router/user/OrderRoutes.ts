@@ -86,4 +86,30 @@ orderRoutes.get("/", authenticate, orderController.list);
  */
 orderRoutes.get("/:id", authenticate, orderController.detail);
 
+/**
+ * @swagger
+ * /orders/{id}/cancel:
+ *   patch:
+ *     summary: Cancel one of your own orders (only while still PENDING)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order cancelled, stock restored
+ *       401:
+ *         description: Missing or invalid token
+ *       404:
+ *         description: Order not found
+ *       409:
+ *         description: Order already moved past PENDING and can no longer be cancelled
+ */
+orderRoutes.patch("/:id/cancel", authenticate, orderController.cancel);
+
 export default orderRoutes;

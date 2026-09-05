@@ -108,6 +108,41 @@ class OrderAction {
       throw error;
     }
   }
+
+  // Buyer can only back out while the seller hasn't acted on it yet.
+  // Cancelling gives the stock back since it was never actually fulfilled.
+  static async cancel(id: string, userId: string) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const order = await tx.order.findFirst({
+          where: { id, userId },
+          include: { items: true },
+        });
+
+        if (!order) {
+          throw new Error("ORDER_NOT_FOUND");
+        }
+        if (order.status !== "PENDING") {
+          throw new Error("CANNOT_CANCEL");
+        }
+
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+
+        return await tx.order.update({
+          where: { id },
+          data: { status: "CANCELLED" },
+        });
+      });
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      throw error;
+    }
+  }
 }
 
 export default OrderAction;
