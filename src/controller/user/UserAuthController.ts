@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import userAuthAction from "../../action/auth/UserAuthAction";
+import userAuthAction from "../../action/user/UserAuthAction";
 import AppResponse from "../../utils/AppResponse";
 
 class UserAuthController {
