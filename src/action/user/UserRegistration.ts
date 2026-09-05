@@ -1,7 +1,7 @@
 import { Response } from "express";
 import prisma from "../../utils/client";
-import Joi from "joi";
 import bcrypt from "bcrypt";
+import { z } from "zod";
 
 type UserRegistrationProps = {
   userEmail: string;
@@ -27,24 +27,22 @@ class UserRegistrationAction {
     }
   }
 
-  static validate(data: UserRegistrationProps) {
-    const UserRegistrationSchema = Joi.object({
-      userEmail: Joi.string().email().required(),
-      userPassword: Joi.string().min(8).required(),
-      confirmPassword: Joi.string()
-        .valid(Joi.ref("userPassword"))
-        .required()
-        .messages({
-          "any.only": "Confirm password must match the password field",
-        }),
-      userContact: Joi.string()
-        .pattern(/^\+?\d{10,12}$/)
-        .required()
-        .messages({
-          "string.pattern.base": "Invalid user contact number format",
-        }),
-    });
-    return UserRegistrationSchema.validate(data, { abortEarly: false });
+  static validate(data: UserRegistrationProps & { confirmPassword: string }) {
+    const UserRegistrationSchema = z
+      .object({
+        userEmail: z.string().email(),
+        userPassword: z.string().min(8),
+        confirmPassword: z.string(),
+        userContact: z
+          .string()
+          .regex(/^\+?\d{10,12}$/, "Invalid user contact number format"),
+      })
+      .refine((val) => val.userPassword === val.confirmPassword, {
+        message: "Confirm password must match the password field",
+        path: ["confirmPassword"],
+      });
+
+    return UserRegistrationSchema.safeParse(data);
   }
 
   static async checkEmail(email: UserRegistrationProps["userEmail"]) {

@@ -1,19 +1,22 @@
-import { NextFunction, Response, Request } from "express";
+import { Request, Response } from "express";
 import UserRegistrationAction from "../../action/user/UserRegistration";
 import AppResponse from "../../utils/AppResponse";
 
 class UserRegistrationController {
   async create(req: Request, res: Response) {
-    const { error, value } = UserRegistrationAction.validate(req.body);
+    const result = UserRegistrationAction.validate(req.body);
 
-    if (error) {
+    if (!result.success) {
       return AppResponse.sendErrors({
         res,
         code: 400,
         data: null,
-        message: error.details.map((detail) => detail.message).join(","),
+        message: result.error.issues.map((issue) => issue.message).join(", "),
       });
     }
+
+    const value = result.data;
+
     try {
       const invalidEmail = await UserRegistrationAction.checkEmail(
         value.userEmail
@@ -27,10 +30,10 @@ class UserRegistrationController {
         });
       }
 
-      const result = await UserRegistrationAction.execute(value, res);
+      const registerResult = await UserRegistrationAction.execute(value, res);
       return AppResponse.sendSuccess({
         res,
-        data: result,
+        data: registerResult,
         code: 201,
       });
     } catch (error) {

@@ -2,7 +2,6 @@ import { User } from "@prisma/client";
 import prisma from "../../utils/client";
 import bcrypt from "bcrypt";
 import { generateToken } from "../../utils/token";
-import Joi from "joi";
 import { z } from "zod";
 
 class userAuthAction {
@@ -29,7 +28,11 @@ class userAuthAction {
         throw new Error("Invalid login credentials");
       }
 
-      return generateToken(user);
+      return generateToken({
+        id: user.id,
+        userEmail: user.userEmail,
+        role: user.role,
+      });
     } catch (error) {
       console.error("Error during login:", error);
       throw error;
